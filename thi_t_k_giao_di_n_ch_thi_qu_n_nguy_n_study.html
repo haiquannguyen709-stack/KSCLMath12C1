@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Thi Trực Tuyến | QUÂN NGUYỄN STUDY - Phòng Chờ Thi</title>
+    
+    <!-- Google Fonts: Be Vietnam Pro -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#E5F4FF',
+                            100: '#D1EAFF',
+                            500: '#1565C0',
+                            700: '#0D47A1',
+                            accent: '#FF9800',
+                            accentHover: '#F57C00'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Be Vietnam Pro"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom Ambient & Glassmorphism Styling */
+        body {
+            background: linear-gradient(135deg, #d1eaff 0%, #e8f4ff 50%, #c1e2ff 100%);
+            font-family: 'Be Vietnam Pro', sans-serif;
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 20px 40px -15px rgba(21, 101, 192, 0.12), 0 0 15px rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-card-accent {
+            background: rgba(229, 244, 255, 0.82);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(21, 101, 192, 0.15);
+        }
+
+        /* Countdown Number Card Box */
+        .time-box {
+            background: linear-gradient(180deg, #ffffff 0%, #f0f7ff 100%);
+            border: 2px solid rgba(21, 101, 192, 0.25);
+            box-shadow: 0 10px 25px -5px rgba(21, 101, 192, 0.15), inset 0 2px 4px rgba(255, 255, 255, 0.9);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .time-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            border-bottom: 1px solid rgba(21, 101, 192, 0.08);
+            pointer-events: none;
+        }
+
+        /* Pulse effects */
+        @keyframes subtlePulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.85; }
+        }
+
+        .animate-subtle-pulse {
+            animation: subtlePulse 2s infinite ease-in-out;
+        }
+
+        @keyframes glowingBorder {
+            0%, 100% { border-color: rgba(21, 101, 192, 0.4); box-shadow: 0 0 15px rgba(21, 101, 192, 0.2); }
+            50% { border-color: rgba(255, 152, 0, 0.6); box-shadow: 0 0 25px rgba(255, 152, 0, 0.3); }
+        }
+
+        .timer-active-border {
+            animation: glowingBorder 3s infinite ease-in-out;
+        }
+
+        @keyframes successGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+            50% { box-shadow: 0 0 35px rgba(16, 185, 129, 0.7); }
+        }
+
+        .btn-unlocked-glow {
+            animation: successGlow 2s infinite ease-in-out;
+        }
+
+        /* Tooltip styling */
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip-text {
+            visibility: hidden;
+            width: 220px;
+            background-color: #0f172a;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 8px 12px;
+            position: absolute;
+            z-index: 50;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.25s, transform 0.25s;
+            transform: translateY(6px);
+            font-size: 0.8125rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            pointer-events: none;
+        }
+
+        .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -6px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: #0f172a transparent transparent transparent;
+        }
+
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Number Flip Transition */
+        .number-change {
+            animation: flipDigit 0.3s ease-out;
+        }
+
+        @keyframes flipDigit {
+            0% { transform: translateY(-10%); opacity: 0.5; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+
+<body class="flex flex-col min-h-screen relative overflow-x-hidden">
+    <!-- Interactive Background Particle Canvas -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- Header Navigation Bar -->
+    <header class="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-brand-500/10 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            
+            <!-- Brand Logo & Slogan -->
+            <div class="flex items-center space-x-3 sm:space-x-4">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-brand-700 to-brand-500 flex items-center justify-center text-white font-extrabold text-xl shadow-md shadow-brand-500/30">
+                    QNS
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-extrabold text-lg sm:text-xl text-brand-700 tracking-tight whitespace-nowrap">QUÂN NGUYỄN STUDY</span>
+                        <span class="hidden sm:inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full bg-brand-50 text-brand-700 border border-brand-500/20">
+                            HỆ THỐNG THI TRỰC TUYẾN
+                        </span>
+                    </div>
+                    <p class="text-xs sm:text-sm font-medium text-brand-accent tracking-wide flex items-center gap-1">
+                        <span>Xây nền tri thức – Kiến tạo tương lai</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- System Live Status -->
+            <div class="flex items-center space-x-3">
+                <div class="hidden md:flex flex-col items-end mr-2">
+                    <span class="text-xs font-medium text-slate-500">Trạng thái hệ thống</span>
+                    <span id="header-time-display" class="text-xs font-mono font-bold text-slate-700">--:--:-- GMT+7</span>
+                </div>
+                <div class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold shadow-sm">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span class="hidden xs:inline">Hệ thống</span>
+                    <span>Đang hoạt động</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow z-10 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col justify-center space-y-8">
+        
+        <!-- Top Dynamic Status Alert Banner -->
+        <div id="status-banner" class="w-full rounded-2xl p-4 transition-all duration-500 flex items-center justify-between shadow-sm bg-amber-500/10 border border-amber-500/30 text-amber-900">
+            <div class="flex items-center space-x-3">
+                <div id="status-banner-icon" class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-700 shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 id="status-banner-title" class="font-bold text-base sm:text-lg text-amber-900">KỲ THI CHƯA BẮT ĐẦU</h2>
+                    <p id="status-banner-desc" class="text-xs sm:text-sm text-amber-800">
+                        Hệ thống sẽ tự động mở quyền truy cập bài thi vào lúc <strong>14:15 ngày 02/10/2026</strong>. Thí sinh vui lòng giữ nguyên trang và chờ đến thời gian quy định.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN EXAMINATION CARD -->
+        <div class="glass-card rounded-3xl p-6 sm:p-8 md:p-10 relative overflow-hidden transition-all duration-300">
+            
+            <!-- Top Card Header -->
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
+                <div>
+                    <div class="flex items-center space-x-2 text-brand-500 font-bold text-xs uppercase tracking-wider mb-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                        <span>Hội đồng thi chính thức</span>
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-brand-700 tracking-tight">QUÂN NGUYỄN STUDY</h1>
+                </div>
+
+                <!-- Live Status Pill -->
+                <div id="exam-status-pill" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 text-amber-800 font-bold text-xs sm:text-sm border border-amber-300 shadow-sm">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span id="exam-status-pill-text">CHƯA ĐẾN GIỜ LÀM BÀI</span>
+                </div>
+            </div>
+
+            <!-- Exam Details Grid -->
+            <div class="py-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Tên Kỳ Thi</span>
+                        <h2 class="text-xl sm:text-2xl font-bold text-slate-800 leading-snug">BÀI KIỂM TRA CHẤT LƯỢNG TOÁN 12</h2>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-semibold text-slate-500">Mã / Tên bài thi:</span>
+                        <code class="px-2.5 py-1 bg-slate-100 text-brand-700 font-mono text-xs font-bold rounded-lg border border-slate-200 flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            12C1D1
+                        </code>
+                    </div>
+
+                    <div class="p-3.5 rounded-xl glass-card-accent flex items-center space-x-3">
+                        <div class="p-2 rounded-lg bg-brand-500/10 text-brand-500">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500 font-medium block">Nội dung phạm vi kiểm tra</span>
+                            <span class="text-sm font-bold text-slate-800">Chủ đề 1: Hàm số</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-sm flex flex-col">
+                            <span class="text-xs text-slate-400 font-medium flex items-center gap-1 mb-1">
+                                <svg class="w-3.5 h-3.5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Ngày thi
+                            </span>
+                            <span class="text-sm font-bold text-slate-800">Thứ Sáu</span>
+                            <span class="text-xs font-semibold text-brand-500">02/10/2026</span>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-sm flex flex-col">
+                            <span class="text-xs text-slate-400 font-medium flex items-center gap-1 mb-1">
+                                <svg class="w-3.5 h-3.5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Giờ mở đề
+                            </span>
+                            <span class="text-sm font-bold text-slate-800">14:15:00</span>
+                            <span class="text-xs font-semibold text-slate-500">Múi giờ GMT+7</span>
+                        </div>
+                    </div>
+
+                    <div class="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200/60 flex items-center space-x-3">
+                        <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="text-xs text-emerald-800 font-bold block">Bảo mật Khảo thí</span>
+                            <span class="text-xs text-emerald-700">Mã hóa tự động – Mở đề đồng bộ theo thời gian thực.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COUNTDOWN TIMER SECTION -->
+            <div class="mt-4 pt-6 border-t border-slate-200/80 text-center">
+                <span class="text-xs font-extrabold text-brand-700 uppercase tracking-widest block mb-4">
+                    THỜI GIAN CÒN LẠI ĐẾN KHI MỞ ĐỀ THI
+                </span>
+
+                <!-- Digital Flip Clock Grid -->
+                <div class="flex items-center justify-center space-x-2 sm:space-x-4 md:space-x-6 my-4" role="timer" aria-live="polite">
+                    <!-- Hours -->
+                    <div class="flex flex-col items-center">
+                        <div class="time-box timer-active-border w-20 h-24 sm:w-28 sm:h-32 md:w-36 md:h-40 rounded-2xl flex items-center justify-center">
+                            <span id="timer-hours" class="font-mono text-3xl sm:text-5xl md:text-6xl font-extrabold text-brand-700 tracking-tighter">00</span>
+                        </div>
+                        <span class="text-xs sm:text-sm font-bold text-slate-500 uppercase mt-2">Giờ</span>
+                    </div>
+
+                    <span class="text-3xl sm:text-5xl md:text-6xl font-extrabold text-brand-500 animate-pulse mb-6">:</span>
+
+                    <!-- Minutes -->
+                    <div class="flex flex-col items-center">
+                        <div class="time-box timer-active-border w-20 h-24 sm:w-28 sm:h-32 md:w-36 md:h-40 rounded-2xl flex items-center justify-center">
+                            <span id="timer-minutes" class="font-mono text-3xl sm:text-5xl md:text-6xl font-extrabold text-brand-700 tracking-tighter">00</span>
+                        </div>
+                        <span class="text-xs sm:text-sm font-bold text-slate-500 uppercase mt-2">Phút</span>
+                    </div>
+
+                    <span class="text-3xl sm:text-5xl md:text-6xl font-extrabold text-brand-500 animate-pulse mb-6">:</span>
+
+                    <!-- Seconds -->
+                    <div class="flex flex-col items-center">
+                        <div class="time-box timer-active-border w-20 h-24 sm:w-28 sm:h-32 md:w-36 md:h-40 rounded-2xl flex items-center justify-center">
+                            <span id="timer-seconds" class="font-mono text-3xl sm:text-5xl md:text-6xl font-extrabold text-brand-accent tracking-tighter">00</span>
+                        </div>
+                        <span class="text-xs sm:text-sm font-bold text-slate-500 uppercase mt-2">Giây</span>
+                    </div>
+                </div>
+
+                <!-- Visual Linear Waiting Progress Bar -->
+                <div class="w-full max-w-xl mx-auto mt-6">
+                    <div class="flex justify-between text-xs text-slate-500 font-medium mb-1.5">
+                        <span id="progress-text-left">Đang chờ mở đề thi</span>
+                        <span id="progress-text-right">14:15:00 02/10/2026</span>
+                    </div>
+                    <div class="w-full h-3 bg-slate-200/80 rounded-full overflow-hidden p-0.5 border border-slate-300/50">
+                        <div id="progress-bar-fill" class="h-full bg-gradient-to-r from-brand-500 to-brand-accent rounded-full transition-all duration-1000 w-0"></div>
+                    </div>
+                </div>
+
+                <!-- ACTION BUTTON AREA -->
+                <div class="mt-8 flex flex-col items-center justify-center">
+                    <div class="tooltip-container">
+                        <a id="btn-enter-exam" href="javascript:void(0)" 
+                           class="inline-flex items-center justify-center space-x-3 px-8 sm:px-12 py-4 sm:py-5 rounded-2xl font-extrabold text-base sm:text-lg transition-all duration-300 shadow-lg bg-slate-300 text-slate-500 cursor-not-allowed pointer-events-none"
+                           aria-disabled="true">
+                            <!-- Lock Icon -->
+                            <svg id="btn-icon-lock" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            <!-- Unlock Icon (Hidden initially) -->
+                            <svg id="btn-icon-unlock" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                            </svg>
+                            <span id="btn-text">VÀO PHÒNG THI</span>
+                        </a>
+                        <span id="btn-tooltip" class="tooltip-text">Bài thi chưa đến thời gian mở.</span>
+                    </div>
+                    <p id="btn-subtext" class="text-xs text-slate-500 mt-3 font-medium">
+                        Thí sinh giữ nguyên màn hình. Nút sẽ tự động kích hoạt ngay khi tới 14:15.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- STUDENT GUIDELINES CARD -->
+        <div class="glass-card rounded-2xl p-6 sm:p-8">
+            <div class="flex items-center space-x-3 mb-4 border-b border-slate-200/80 pb-3">
+                <div class="p-2 rounded-lg bg-brand-500 text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-extrabold text-slate-800">HƯỚNG DẪN DÀNH CHO THÍ SINH</h3>
+            </div>
+
+            <ul class="space-y-3 text-xs sm:text-sm text-slate-700">
+                <li class="flex items-start space-x-3">
+                    <span class="mt-0.5 p-1 rounded-full bg-emerald-100 text-emerald-600 shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </span>
+                    <span>Vui lòng kiểm tra kỹ thông tin hội đồng thi và môn thi trước khi bắt đầu làm bài.</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                    <span class="mt-0.5 p-1 rounded-full bg-emerald-100 text-emerald-600 shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </span>
+                    <span>Thí sinh chỉ được phép truy cập bài thi chính thức từ <strong>14:15:00 ngày 02/10/2026</strong>.</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                    <span class="mt-0.5 p-1 rounded-full bg-emerald-100 text-emerald-600 shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </span>
+                    <span>Đảm bảo thiết bị của bạn có kết nối Internet ổn định và trình duyệt không bị chặn Pop-up.</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                    <span class="mt-0.5 p-1 rounded-full bg-emerald-100 text-emerald-600 shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </span>
+                    <span>Khuyến nghị không tắt hoặc tải lại trang này để hệ thống tự động kích hoạt nút VÀO THI chính xác từng giây.</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                    <span class="mt-0.5 p-1 rounded-full bg-emerald-100 text-emerald-600 shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </span>
+                    <span>Sau khi nhấn nút "VÀO PHÒNG THI", vui lòng đọc kỹ quy chế và hướng dẫn làm bài trên giao diện chính.</span>
+                </li>
+            </ul>
+        </div>
+
+        
+
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="mt-auto z-10 w-full bg-white/80 backdrop-blur-md border-t border-slate-200 py-6 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 space-y-2">
+            <div class="flex items-center justify-center space-x-2">
+                <span class="font-extrabold text-brand-700">QUÂN NGUYỄN STUDY</span>
+                <span>•</span>
+                <span class="text-brand-accent font-semibold">Xây nền tri thức – Kiến tạo tương lai</span>
+            </div>
+            <p>HỆ THỐNG THI TRỰC TUYẾN | BAN KHẢO THÍ CHẤT LƯỢNG © 2026</p>
+            <div class="pt-2 flex items-center justify-center space-x-4 text-xxs text-slate-400">
+                <span id="footer-conn-status">Kết nối: Sẵn sàng</span>
+                <span>•</span>
+                <span>Múi giờ: Vietnam Standard Time (UTC+7)</span>
+                <span>•</span>
+                <span>File đích: <code class="text-slate-600">Đề_thi_Toán_12_C1.html</code></span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        /* ==========================================================================
+           1. CONFIGURATION & TARGET TIMESTAMP CALCULATION
+           ========================================================================== */
+        // Target exam start time: October 2, 2026 at 14:15:00 UTC+7
+        // Equivalent UTC timestamp: Date.UTC(2026, 9, 2, 7, 15, 0)
+        // Note: Month in JS Date.UTC is 0-indexed (9 = October).
+        const EXAM_TARGET_UTC = Date.UTC(2026, 9, 2, 7, 15, 0); 
+        const EXAM_TARGET_FILE = "Đề_thi_Toán_12_C1.html";
+
+        // Internal State Variable
+        let simulationMode = 'real'; // 'real' or 'simulated'
+        let isExamUnlocked = false;
+
+        /* ==========================================================================
+           2. DOM ELEMENTS CACHE
+           ========================================================================== */
+        const timerHoursEl = document.getElementById('timer-hours');
+        const timerMinutesEl = document.getElementById('timer-minutes');
+        const timerSecondsEl = document.getElementById('timer-seconds');
+        
+        const statusBanner = document.getElementById('status-banner');
+        const statusBannerIcon = document.getElementById('status-banner-icon');
+        const statusBannerTitle = document.getElementById('status-banner-title');
+        const statusBannerDesc = document.getElementById('status-banner-desc');
+        
+        const examStatusPill = document.getElementById('exam-status-pill');
+        const examStatusPillText = document.getElementById('exam-status-pill-text');
+        
+        const btnEnterExam = document.getElementById('btn-enter-exam');
+        const btnIconLock = document.getElementById('btn-icon-lock');
+        const btnIconUnlock = document.getElementById('btn-icon-unlock');
+        const btnText = document.getElementById('btn-text');
+        const btnTooltip = document.getElementById('btn-tooltip');
+        const btnSubtext = document.getElementById('btn-subtext');
+        
+        const progressBarFill = document.getElementById('progress-bar-fill');
+        const headerTimeDisplay = document.getElementById('header-time-display');
+        const footerConnStatus = document.getElementById('footer-conn-status');
+
+        /* ==========================================================================
+           3. AMBIENT CANVAS PARTICLES SYSTEM
+           ========================================================================== */
+        function initParticles() {
+            const canvas = document.getElementById('particle-canvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            class Particle {
+                constructor() {
+                    this.reset();
+                }
+                reset() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.radius = Math.random() * 2.5 + 1;
+                    this.alpha = Math.random() * 0.5 + 0.2;
+                    this.vx = (Math.random() - 0.5) * 0.4;
+                    this.vy = (Math.random() - 0.5) * 0.4;
+                }
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                        this.reset();
+                    }
+                }
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(21, 101, 192, ${this.alpha})`;
+                    ctx.fill();
+                }
+            }
+
+            for (let i = 0; i < 40; i++) {
+                particles.push(new Particle());
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => {
+                    p.update();
+                    p.draw();
+                });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        /* ==========================================================================
+           4. COUNTDOWN ENGINE & LOCK/UNLOCK STATE MACHINE
+           ========================================================================== */
+        function updateClockAndCountdown() {
+            const now = new Date();
+            
+            // Format ICT / UTC+7 Header Clock Display
+            const utc7TimeStr = new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60000)
+                .toLocaleTimeString('vi-VN', { hour12: false });
+            if (headerTimeDisplay) {
+                headerTimeDisplay.textContent = `${utc7TimeStr} (ICT/UTC+7)`;
+            }
+
+            // Calculate current distance in ms
+            let currentTimestamp = now.getTime();
+            
+            if (simulationMode === 'simulated') {
+                // Fast-forward to exactly target time
+                currentTimestamp = EXAM_TARGET_UTC + 1000;
+            }
+
+            const diff = EXAM_TARGET_UTC - currentTimestamp;
+
+            if (diff <= 0) {
+                // TARGET TIME REACHED OR PASSED!
+                renderUnlockedState();
+            } else {
+                // STILL WAITING
+                renderLockedState(diff);
+            }
+        }
+
+        /**
+         * Renders the locked waiting room UI
+         */
+        function renderLockedState(diffMs) {
+            isExamUnlocked = false;
+
+            // Compute total remaining hours, minutes, seconds
+            const totalSeconds = Math.floor(diffMs / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            const hhStr = String(hours).padStart(2, '0');
+            const mmStr = String(minutes).padStart(2, '0');
+            const ssStr = String(seconds).padStart(2, '0');
+
+            // Update timer display values safely with animation class
+            updateDigit('timer-hours', hhStr);
+            updateDigit('timer-minutes', mmStr);
+            updateDigit('timer-seconds', ssStr);
+
+            // Update Progress Bar (capped visually for countdown anticipation)
+            // Assuming 24h total countdown scale for visual feedback
+            const totalScaleMs = 24 * 3600 * 1000;
+            const progressPercent = Math.min(100, Math.max(5, 100 - (diffMs / totalScaleMs * 100)));
+            if (progressBarFill) {
+                progressBarFill.style.width = `${progressPercent}%`;
+            }
+
+            // Update Alert Banner
+            statusBanner.className = "w-full rounded-2xl p-4 transition-all duration-500 flex items-center justify-between shadow-sm bg-amber-500/10 border border-amber-500/30 text-amber-900";
+            statusBannerIcon.className = "w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-700 shrink-0";
+            statusBannerTitle.textContent = "KỲ THI CHƯA BẮT ĐẦU";
+            statusBannerDesc.innerHTML = "Hệ thống sẽ tự động mở quyền truy cập bài thi vào lúc <strong>14:15 ngày 02/10/2026</strong>. Thí sinh vui lòng giữ nguyên trang và chờ đến thời gian quy định.";
+
+            // Update Status Pill
+            examStatusPill.className = "inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 text-amber-800 font-bold text-xs sm:text-sm border border-amber-300 shadow-sm";
+            examStatusPillText.textContent = "CHƯA ĐẾN GIỜ LÀM BÀI";
+
+            // Update Action Button (DISABLED)
+            btnEnterExam.className = "inline-flex items-center justify-center space-x-3 px-8 sm:px-12 py-4 sm:py-5 rounded-2xl font-extrabold text-base sm:text-lg transition-all duration-300 shadow-lg bg-slate-200 text-slate-400 cursor-not-allowed pointer-events-none opacity-80";
+            btnEnterExam.setAttribute("aria-disabled", "true");
+            btnEnterExam.removeAttribute("href");
+            btnIconLock.classList.remove("hidden");
+            btnIconUnlock.classList.add("hidden");
+            btnText.textContent = "VÀO PHÒNG THI";
+            btnTooltip.textContent = "Bài thi chưa đến thời gian mở.";
+            btnSubtext.textContent = "Thí sinh giữ nguyên màn hình. Nút sẽ tự động kích hoạt ngay khi tới 14:15.";
+        }
+
+        /**
+         * Renders the unlocked active exam UI
+         */
+        function renderUnlockedState() {
+            if (isExamUnlocked) return; // Prevent redundant DOM updates
+            isExamUnlocked = true;
+
+            // Zero out timer
+            updateDigit('timer-hours', '00');
+            updateDigit('timer-minutes', '00');
+            updateDigit('timer-seconds', '00');
+
+            if (progressBarFill) {
+                progressBarFill.style.width = `100%`;
+            }
+
+            // Update Alert Banner to SUCCESS
+            statusBanner.className = "w-full rounded-2xl p-4 transition-all duration-500 flex items-center justify-between shadow-md bg-emerald-500/15 border border-emerald-500/40 text-emerald-950 animate-subtle-pulse";
+            statusBannerIcon.className = "w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-700 shrink-0";
+            statusBannerIcon.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+            statusBannerTitle.textContent = "ĐÃ ĐẾN GIỜ LÀM BÀI – KỲ THI ĐANG MỞ";
+            statusBannerDesc.innerHTML = "Thí sinh đã có thể bấm nút <strong>VÀO PHÒNG THI</strong> bên dưới để bắt đầu làm bài kiểm tra ngay lập tức.";
+
+            // Update Status Pill
+            examStatusPill.className = "inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs sm:text-sm border border-emerald-300 shadow-sm";
+            examStatusPillText.textContent = "KỲ THI ĐANG MỞ";
+
+            // Update Action Button (ENABLED & GLOWING)
+            btnEnterExam.className = "inline-flex items-center justify-center space-x-3 px-8 sm:px-12 py-4 sm:py-5 rounded-2xl font-extrabold text-base sm:text-lg transition-all duration-300 shadow-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white hover:from-brand-700 hover:to-blue-900 active:scale-95 cursor-pointer btn-unlocked-glow";
+            btnEnterExam.setAttribute("aria-disabled", "false");
+            btnEnterExam.setAttribute("href", EXAM_TARGET_FILE);
+            btnIconLock.classList.add("hidden");
+            btnIconUnlock.classList.remove("hidden");
+            btnText.textContent = "TRUY CẬP BÀI THI NGAY";
+            btnTooltip.textContent = "Nhấn để bắt đầu làm bài thi!";
+            btnSubtext.innerHTML = `<span class="text-emerald-700 font-bold">✓ Hệ thống đã mở quyền truy cập. Bấm nút phía trên để mở bài thi.</span>`;
+        }
+
+        /**
+         * Helper to update digit text with smooth CSS animation
+         */
+        function updateDigit(elementId, newValue) {
+            const el = document.getElementById(elementId);
+            if (el && el.textContent !== newValue) {
+                el.textContent = newValue;
+                el.classList.remove('number-change');
+                void el.offsetWidth; // trigger reflow
+                el.classList.add('number-change');
+            }
+        }
+
+        /* ==========================================================================
+           5. EVENT LISTENERS & INTERACTIVE SIMULATION
+           ========================================================================== */
+        // Explicit click protection on the enter exam button
+        btnEnterExam.addEventListener('click', function(e) {
+            if (!isExamUnlocked) {
+                e.preventDefault();
+                alert("Thông báo từ Hội đồng thi QUÂN NGUYỄN STUDY:\n\nBài thi chưa đến giờ mở (14:15:00 ngày 02/10/2026). Thí sinh vui lòng kiên nhẫn chờ đợi.");
+            }
+        });
+
+        // Online / Offline Status Monitoring
+        function updateOnlineStatus() {
+            if (navigator.onLine) {
+                footerConnStatus.textContent = "Kết nối: Sẵn sàng (Online)";
+                footerConnStatus.className = "text-emerald-600 font-medium";
+            } else {
+                footerConnStatus.textContent = "Kết nối: Mất kết nối Internet!";
+                footerConnStatus.className = "text-amber-600 font-bold";
+            }
+        }
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+
+        // Simulation Mode Toggle for Evaluation
+        window.setDemoMode = function(mode) {
+            simulationMode = mode;
+            const btnReal = document.getElementById('btn-demo-real');
+            const btnSim = document.getElementById('btn-demo-sim');
+
+            if (mode === 'simulated') {
+                btnReal.className = "px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 font-bold transition hover:bg-brand-100";
+                btnSim.className = "px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold transition shadow-sm animate-pulse";
+                isExamUnlocked = false; // reset for state trigger
+            } else {
+                btnReal.className = "px-3 py-1.5 rounded-lg bg-brand-500 text-white font-bold transition shadow-sm";
+                btnSim.className = "px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 font-bold transition hover:bg-brand-100";
+                isExamUnlocked = false; // reset for state trigger
+            }
+            updateClockAndCountdown();
+        };
+
+        /* ==========================================================================
+           6. INITIALIZATION ON WINDOW LOAD
+           ========================================================================== */
+        window.onload = function() {
+            initParticles();
+            updateOnlineStatus();
+            
+            // Initial call
+            updateClockAndCountdown();
+            
+            // High-precision clock interval
+            setInterval(updateClockAndCountdown, 1000);
+        };
+    </script>
+</body>
+</html>
