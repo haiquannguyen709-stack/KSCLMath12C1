@@ -232,7 +232,7 @@
                 <div>
                     <h2 id="status-banner-title" class="font-bold text-base sm:text-lg text-amber-900">KỲ THI CHƯA BẮT ĐẦU</h2>
                     <p id="status-banner-desc" class="text-xs sm:text-sm text-amber-800">
-                        Hệ thống sẽ tự động mở quyền truy cập bài thi vào lúc <strong>14:15 ngày 02/10/2026</strong>. Thí sinh vui lòng giữ nguyên trang và chờ đến thời gian quy định.
+                        Hệ thống sẽ tự động mở quyền truy cập bài thi từ <strong>21:15:00</strong> đến <strong>21:30:00 ngày 09/10/2026</strong>. Thí sinh vui lòng giữ nguyên trang và chờ đến thời gian quy định.
                     </p>
                 </div>
             </div>
@@ -301,7 +301,7 @@
                                 Ngày thi
                             </span>
                             <span class="text-sm font-bold text-slate-800">Thứ Sáu</span>
-                            <span class="text-xs font-semibold text-brand-500">02/10/2026</span>
+                            <span class="text-xs font-semibold text-brand-500">09/10/2026</span>
                         </div>
 
                         <div class="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-sm flex flex-col">
@@ -309,9 +309,9 @@
                                 <svg class="w-3.5 h-3.5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                Giờ mở đề
+                                Khung giờ mở đề
                             </span>
-                            <span class="text-sm font-bold text-slate-800">14:15:00</span>
+                            <span class="text-sm font-bold text-slate-800">21:15:00 - 21:30:00</span>
                             <span class="text-xs font-semibold text-slate-500">Múi giờ GMT+7</span>
                         </div>
                     </div>
@@ -371,7 +371,7 @@
                 <div class="w-full max-w-xl mx-auto mt-6">
                     <div class="flex justify-between text-xs text-slate-500 font-medium mb-1.5">
                         <span id="progress-text-left">Đang chờ mở đề thi</span>
-                        <span id="progress-text-right">14:15:00 02/10/2026</span>
+                        <span id="progress-text-right">21:15:00 09/10/2026</span>
                     </div>
                     <div class="w-full h-3 bg-slate-200/80 rounded-full overflow-hidden p-0.5 border border-slate-300/50">
                         <div id="progress-bar-fill" class="h-full bg-gradient-to-r from-brand-500 to-brand-accent rounded-full transition-all duration-1000 w-0"></div>
@@ -397,7 +397,7 @@
                         <span id="btn-tooltip" class="tooltip-text">Bài thi chưa đến thời gian mở.</span>
                     </div>
                     <p id="btn-subtext" class="text-xs text-slate-500 mt-3 font-medium">
-                        Thí sinh giữ nguyên màn hình. Nút sẽ tự động kích hoạt ngay khi tới 14:15.
+                        Thí sinh giữ nguyên màn hình. Nút sẽ tự động kích hoạt từ 21:15 đến 21:30.
                     </p>
                 </div>
             </div>
@@ -429,7 +429,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                         </svg>
                     </span>
-                    <span>Thí sinh chỉ được phép truy cập bài thi chính thức từ <strong>14:15:00 ngày 02/10/2026</strong>.</span>
+                    <span>Thí sinh chỉ được phép truy cập bài thi chính thức từ <strong>21:15:00 đến 21:30:00 ngày 09/10/2026</strong>.</span>
                 </li>
                 <li class="flex items-start space-x-3">
                     <span class="mt-0.5 p-1 rounded-full bg-emerald-100 text-emerald-600 shrink-0">
@@ -485,15 +485,16 @@
         /* ==========================================================================
            1. CONFIGURATION & TARGET TIMESTAMP CALCULATION
            ========================================================================== */
-        // Target exam start time: October 2, 2026 at 14:15:00 UTC+7
-        // Equivalent UTC timestamp: Date.UTC(2026, 9, 2, 7, 15, 0)
-        // Note: Month in JS Date.UTC is 0-indexed (9 = October).
-        const EXAM_TARGET_UTC = Date.UTC(2026, 9, 2, 7, 15, 0); 
-        const EXAM_TARGET_FILE = "Đề_thi_Toán_12_C1.html";
+        // Exam schedule: October 9, 2026 (UTC+7 / Vietnam Standard Time)
+        // Open time: 21:15:00 UTC+7 = 14:15:00 UTC -> Date.UTC(2026, 9, 9, 14, 15, 0)
+        // Close time: 21:30:00 UTC+7 = 14:30:00 UTC -> Date.UTC(2026, 9, 9, 14, 30, 0)
+        const EXAM_OPEN_UTC = Date.UTC(2026, 9, 9, 14, 15, 0); 
+        const EXAM_CLOSE_UTC = Date.UTC(2026, 9, 9, 14, 30, 0);
+        const EXAM_TARGET_FILE = "Đề thi KSCL Toán 12";
 
-        // Internal State Variable
+        // Internal State Variable: 'BEFORE', 'OPEN', 'CLOSED'
         let simulationMode = 'real'; // 'real' or 'simulated'
-        let isExamUnlocked = false;
+        let currentExamStatus = '';
 
         /* ==========================================================================
            2. DOM ELEMENTS CACHE
@@ -591,59 +592,45 @@
                 headerTimeDisplay.textContent = `${utc7TimeStr} (ICT/UTC+7)`;
             }
 
-            // Calculate current distance in ms
+            // Calculate current distance in ms (UTC Epoch offset, timezone independent)
             let currentTimestamp = now.getTime();
             
             if (simulationMode === 'simulated') {
-                // Fast-forward to exactly target time
-                currentTimestamp = EXAM_TARGET_UTC + 1000;
+                // Fast-forward to simulated open window
+                currentTimestamp = EXAM_OPEN_UTC + 1000;
             }
 
-            const diff = EXAM_TARGET_UTC - currentTimestamp;
-
-            if (diff <= 0) {
-                // TARGET TIME REACHED OR PASSED!
+            if (currentTimestamp < EXAM_OPEN_UTC) {
+                // TRẠNG THÁI 1: CHƯA MỞ ĐỀ (Trước 21:15:00 ngày 09/10/2026)
+                const diffMs = EXAM_OPEN_UTC - currentTimestamp;
+                renderLockedState(diffMs);
+            } else if (currentTimestamp >= EXAM_OPEN_UTC && currentTimestamp < EXAM_CLOSE_UTC) {
+                // TRẠNG THÁI 2: ĐANG MỞ ĐỀ (Từ 21:15:00 đến trước 21:30:00 ngày 09/10/2026)
                 renderUnlockedState();
             } else {
-                // STILL WAITING
-                renderLockedState(diff);
+                // TRẠNG THÁI 3: ĐÃ ĐÓNG ĐỀ (Từ 21:30:00 ngày 09/10/2026 trở đi)
+                renderClosedState();
             }
         }
 
         /**
-         * Renders the locked waiting room UI
+         * Renders the locked waiting room UI (Before 21:15:00)
          */
         function renderLockedState(diffMs) {
-            isExamUnlocked = false;
-
-            // Compute total remaining hours, minutes, seconds
-            const totalSeconds = Math.floor(diffMs / 1000);
-            const hours = Math.floor(totalSeconds / 3600);
-            const minutes = Math.floor((totalSeconds % 3600) / 60);
-            const seconds = totalSeconds % 60;
-
-            const hhStr = String(hours).padStart(2, '0');
-            const mmStr = String(minutes).padStart(2, '0');
-            const ssStr = String(seconds).padStart(2, '0');
-
-            // Update timer display values safely with animation class
-            updateDigit('timer-hours', hhStr);
-            updateDigit('timer-minutes', mmStr);
-            updateDigit('timer-seconds', ssStr);
-
-            // Update Progress Bar (capped visually for countdown anticipation)
-            // Assuming 24h total countdown scale for visual feedback
-            const totalScaleMs = 24 * 3600 * 1000;
-            const progressPercent = Math.min(100, Math.max(5, 100 - (diffMs / totalScaleMs * 100)));
-            if (progressBarFill) {
-                progressBarFill.style.width = `${progressPercent}%`;
+            if (currentExamStatus === 'BEFORE') {
+                updateCountdownDisplay(diffMs);
+                return;
             }
+            currentExamStatus = 'BEFORE';
+
+            updateCountdownDisplay(diffMs);
 
             // Update Alert Banner
             statusBanner.className = "w-full rounded-2xl p-4 transition-all duration-500 flex items-center justify-between shadow-sm bg-amber-500/10 border border-amber-500/30 text-amber-900";
             statusBannerIcon.className = "w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-700 shrink-0";
+            statusBannerIcon.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
             statusBannerTitle.textContent = "KỲ THI CHƯA BẮT ĐẦU";
-            statusBannerDesc.innerHTML = "Hệ thống sẽ tự động mở quyền truy cập bài thi vào lúc <strong>14:15 ngày 02/10/2026</strong>. Thí sinh vui lòng giữ nguyên trang và chờ đến thời gian quy định.";
+            statusBannerDesc.innerHTML = "Hệ thống sẽ tự động mở quyền truy cập bài thi từ <strong>21:15:00</strong> đến <strong>21:30:00 ngày 09/10/2026</strong>. Thí sinh vui lòng giữ nguyên trang và chờ đến thời gian quy định.";
 
             // Update Status Pill
             examStatusPill.className = "inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 text-amber-800 font-bold text-xs sm:text-sm border border-amber-300 shadow-sm";
@@ -657,15 +644,39 @@
             btnIconUnlock.classList.add("hidden");
             btnText.textContent = "VÀO PHÒNG THI";
             btnTooltip.textContent = "Bài thi chưa đến thời gian mở.";
-            btnSubtext.textContent = "Thí sinh giữ nguyên màn hình. Nút sẽ tự động kích hoạt ngay khi tới 14:15.";
+            btnSubtext.textContent = "Thí sinh giữ nguyên màn hình. Nút sẽ tự động kích hoạt lúc 21:15:00.";
         }
 
         /**
-         * Renders the unlocked active exam UI
+         * Helper function to update countdown numbers
+         */
+        function updateCountdownDisplay(diffMs) {
+            const totalSeconds = Math.floor(diffMs / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            const hhStr = String(hours).padStart(2, '0');
+            const mmStr = String(minutes).padStart(2, '0');
+            const ssStr = String(seconds).padStart(2, '0');
+
+            updateDigit('timer-hours', hhStr);
+            updateDigit('timer-minutes', mmStr);
+            updateDigit('timer-seconds', ssStr);
+
+            const totalScaleMs = 24 * 3600 * 1000;
+            const progressPercent = Math.min(100, Math.max(5, 100 - (diffMs / totalScaleMs * 100)));
+            if (progressBarFill) {
+                progressBarFill.style.width = `${progressPercent}%`;
+            }
+        }
+
+        /**
+         * Renders the unlocked active exam UI (21:15:00 - 21:30:00)
          */
         function renderUnlockedState() {
-            if (isExamUnlocked) return; // Prevent redundant DOM updates
-            isExamUnlocked = true;
+            if (currentExamStatus === 'OPEN') return; // Prevent redundant DOM updates
+            currentExamStatus = 'OPEN';
 
             // Zero out timer
             updateDigit('timer-hours', '00');
@@ -681,7 +692,7 @@
             statusBannerIcon.className = "w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-700 shrink-0";
             statusBannerIcon.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
             statusBannerTitle.textContent = "ĐÃ ĐẾN GIỜ LÀM BÀI – KỲ THI ĐANG MỞ";
-            statusBannerDesc.innerHTML = "Thí sinh đã có thể bấm nút <strong>VÀO PHÒNG THI</strong> bên dưới để bắt đầu làm bài kiểm tra ngay lập tức.";
+            statusBannerDesc.innerHTML = "Thí sinh bấm nút <strong>VÀO PHÒNG THI</strong> bên dưới để bắt đầu làm bài. Quyền truy cập sẽ đóng vào lúc <strong>21:30:00</strong>.";
 
             // Update Status Pill
             examStatusPill.className = "inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs sm:text-sm border border-emerald-300 shadow-sm";
@@ -696,6 +707,44 @@
             btnText.textContent = "TRUY CẬP BÀI THI NGAY";
             btnTooltip.textContent = "Nhấn để bắt đầu làm bài thi!";
             btnSubtext.innerHTML = `<span class="text-emerald-700 font-bold">✓ Hệ thống đã mở quyền truy cập. Bấm nút phía trên để mở bài thi.</span>`;
+        }
+
+        /**
+         * Renders the closed exam UI (After 21:30:00)
+         */
+        function renderClosedState() {
+            if (currentExamStatus === 'CLOSED') return; // Prevent redundant DOM updates
+            currentExamStatus = 'CLOSED';
+
+            // Zero out timer
+            updateDigit('timer-hours', '00');
+            updateDigit('timer-minutes', '00');
+            updateDigit('timer-seconds', '00');
+
+            if (progressBarFill) {
+                progressBarFill.style.width = `100%`;
+            }
+
+            // Update Alert Banner to CLOSED
+            statusBanner.className = "w-full rounded-2xl p-4 transition-all duration-500 flex items-center justify-between shadow-md bg-rose-500/15 border border-rose-500/40 text-rose-950";
+            statusBannerIcon.className = "w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-700 shrink-0";
+            statusBannerIcon.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>`;
+            statusBannerTitle.textContent = "KỲ THI ĐÃ ĐÓNG ĐỀ";
+            statusBannerDesc.innerHTML = "Thời gian mở đề thi đã kết thúc vào lúc <strong>21:30:00 ngày 09/10/2026</strong>. Quyền truy cập bài thi từ phòng chờ đã bị khóa.";
+
+            // Update Status Pill
+            examStatusPill.className = "inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rose-100 text-rose-800 font-bold text-xs sm:text-sm border border-rose-300 shadow-sm";
+            examStatusPillText.textContent = "ĐÃ ĐÓNG ĐỀ THI";
+
+            // Update Action Button (DISABLED)
+            btnEnterExam.className = "inline-flex items-center justify-center space-x-3 px-8 sm:px-12 py-4 sm:py-5 rounded-2xl font-extrabold text-base sm:text-lg transition-all duration-300 shadow-lg bg-slate-200 text-slate-400 cursor-not-allowed pointer-events-none opacity-80";
+            btnEnterExam.setAttribute("aria-disabled", "true");
+            btnEnterExam.removeAttribute("href");
+            btnIconLock.classList.remove("hidden");
+            btnIconUnlock.classList.add("hidden");
+            btnText.textContent = "ĐÃ ĐÓNG PHÒNG THI";
+            btnTooltip.textContent = "Kỳ thi đã hết thời gian cho phép truy cập.";
+            btnSubtext.innerHTML = `<span class="text-rose-600 font-bold">✕ Đã hết thời gian truy cập bài thi (đóng lúc 21:30:00).</span>`;
         }
 
         /**
@@ -716,9 +765,12 @@
            ========================================================================== */
         // Explicit click protection on the enter exam button
         btnEnterExam.addEventListener('click', function(e) {
-            if (!isExamUnlocked) {
+            if (currentExamStatus === 'BEFORE') {
                 e.preventDefault();
-                alert("Thông báo từ Hội đồng thi QUÂN NGUYỄN STUDY:\n\nBài thi chưa đến giờ mở (14:15:00 ngày 02/10/2026). Thí sinh vui lòng kiên nhẫn chờ đợi.");
+                alert("Thông báo từ Hội đồng thi QUÂN NGUYỄN STUDY:\n\nBài thi chưa đến giờ mở (21:15:00 ngày 09/10/2026). Thí sinh vui lòng kiên nhẫn chờ đợi.");
+            } else if (currentExamStatus === 'CLOSED') {
+                e.preventDefault();
+                alert("Thông báo từ Hội đồng thi QUÂN NGUYỄN STUDY:\n\nKỳ thi đã kết thúc thời gian mở đề (21:30:00 ngày 09/10/2026). Thí sinh không thể truy cập vào bài thi nữa.");
             }
         });
 
@@ -741,15 +793,16 @@
             const btnReal = document.getElementById('btn-demo-real');
             const btnSim = document.getElementById('btn-demo-sim');
 
-            if (mode === 'simulated') {
-                btnReal.className = "px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 font-bold transition hover:bg-brand-100";
-                btnSim.className = "px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold transition shadow-sm animate-pulse";
-                isExamUnlocked = false; // reset for state trigger
-            } else {
-                btnReal.className = "px-3 py-1.5 rounded-lg bg-brand-500 text-white font-bold transition shadow-sm";
-                btnSim.className = "px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 font-bold transition hover:bg-brand-100";
-                isExamUnlocked = false; // reset for state trigger
+            if (btnReal && btnSim) {
+                if (mode === 'simulated') {
+                    btnReal.className = "px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 font-bold transition hover:bg-brand-100";
+                    btnSim.className = "px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold transition shadow-sm animate-pulse";
+                } else {
+                    btnReal.className = "px-3 py-1.5 rounded-lg bg-brand-500 text-white font-bold transition shadow-sm";
+                    btnSim.className = "px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 font-bold transition hover:bg-brand-100";
+                }
             }
+            currentExamStatus = ''; // Reset state variable to trigger re-render
             updateClockAndCountdown();
         };
 
